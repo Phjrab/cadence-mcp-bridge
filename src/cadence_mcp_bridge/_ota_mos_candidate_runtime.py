@@ -26,6 +26,7 @@ SOURCE, CHILD = "Ota17Base20261126", "Ota17Candidate20261126"
 DUT, TB = "self_cascode_ota_17mos", "self_cascode_ota_tb"
 SOURCE_PATH = "/home/buet/cds_work/Ota17BaseOutputs20261126_v1/" + SOURCE
 CHILD_PATH = "/home/buet/cds_work/Ota17CandidateOutputs20261126_v1/" + CHILD
+CHILD_STATE = os.path.dirname(CHILD_PATH) + "/" + TB + "_ADE"
 SOURCE9_SHA256 = "539794c47d1b5ab57a04030e892ab41763be93a0b752129f5771f2369447c147"
 OTA_SKILL_SHA256 = "9ed25ec92700c9b323ecabbd0e0e2ccea2323b1009fdb8a1fa6c53081be7192c"
 PHASES = ("EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST")
@@ -528,6 +529,93 @@ def verify_safety(p, route, legacy):
     )
 
 
+def verify_clone_receipt(receipt, completion, intent, stdout, pin, subject, generation):
+    """Bind the original C1 clone journal without synthesizing a receipt."""
+    digest = pin["copy_receipt_sha256"]
+    operation = subject["owned_copy_operation_id"]
+    require(
+        set(receipt)
+        == set(
+            (
+                "status",
+                "operation_id",
+                "scope_sha256",
+                "intent_sha256",
+                "original_trees",
+                "owned_trees",
+                "owned_library",
+                "owned_state",
+                "original_ac_operation_id",
+                "original_dc_operation_id",
+                "stdout_sha256",
+                "ocean",
+                "spectre",
+                "reservations",
+            )
+        )
+        and _sha(_canonical(receipt)) == digest
+        and completion == dict(receipt_sha256=digest)
+        and _HEX.match(receipt["scope_sha256"])
+        and _sha(_canonical(intent)) == receipt["intent_sha256"]
+        and intent
+        == dict(scope_sha256=receipt["scope_sha256"], operation_id=operation, retry=False)
+        and (
+            receipt["status"],
+            receipt["operation_id"],
+            receipt["owned_library"],
+            receipt["owned_state"],
+        )
+        == ("OTA17_OWNED_CLONE_RETARGETED", operation, CHILD, CHILD_STATE)
+        and all(type(receipt[key]) is int for key in ("ocean", "spectre", "reservations"))
+        and (receipt["ocean"], receipt["spectre"], receipt["reservations"]) == (1, 0, 0),
+        "clone_journal",
+    )
+    ids = (
+        receipt["original_ac_operation_id"],
+        receipt["original_dc_operation_id"],
+        operation,
+        generation,
+        subject["operation_id"],
+    )
+    marker = ("OTA17_CANDIDATE_BENCH_RETARGETED|" + operation).encode("ascii")
+    require(
+        all(_OP.match(value) for value in ids)
+        and len(set(ids)) == len(ids)
+        and _sha(stdout) == receipt["stdout_sha256"]
+        and [row for row in stdout.splitlines() if row.startswith(b"OTA17_CANDIDATE_")] == [marker],
+        "clone_operation_evidence",
+    )
+    original, owned = receipt["original_trees"], receipt["owned_trees"]
+    fields = set(("library", "strict_library", "dut", "symbol", "bench", "state"))
+    require(
+        set(original) == set(owned) == fields
+        and all(_HEX.match(tree[field]) for tree in (original, owned) for field in fields)
+        and (
+            original["library"],
+            original["dut"],
+            original["symbol"],
+            original["bench"],
+            original["state"],
+        )
+        == (
+            pin["source_library_tree_sha256"],
+            pin["source_dut_tree_sha256"],
+            pin["source_symbol_tree_sha256"],
+            pin["source_tb_tree_sha256"],
+            pin["source_ade_tree_sha256"],
+        )
+        and (owned["strict_library"], owned["dut"], owned["symbol"], owned["bench"])
+        == (
+            pin["owned_library_tree_sha256"],
+            subject["owned_before_view_tree_sha256"],
+            pin["owned_symbol_tree_sha256"],
+            subject["owned_before_testbench_tree_sha256"],
+        ),
+        "clone_tree_binding",
+    )
+    return original, owned
+
+
 def _skill_links(legacy, terminals):
     return (
         "list("
@@ -667,18 +755,7 @@ class _OtaJob(object):
             and self.digest_doc(original) == self.subject["source_preservation_sha256"],
             "original_preservation",
         )
-        libraries = self.analysis["libraries"]
-        rt.gate.library_binding({"libraries": libraries})
-        require(
-            any(
-                row["name"] == "gpdk090"
-                and row["tree_sha256"] == self.legacy.SIZING_PDK_TREE_SHA256
-                for row in libraries
-            )
-            and rt.copying.dependency_snapshot(p["technology_path"])["tree_sha256"]
-            == p["technology_tree_sha256"],
-            "pdk_and_technology",
-        )
+        rt.gate.library_binding({"libraries": self._registered_libraries()})
         rt.gate.model_binding(self.analysis)
 
     def _capacity(self):
@@ -744,46 +821,49 @@ class _OtaJob(object):
             h.read(self.confirmations + "/" + self.digest + ".json", 4096) == self.approval,
             "native_approval",
         )
-        raw = _pinned(
-            h.read(self.copy + "/registered-mos-copy-receipt.json", 4096), p["copy_receipt_sha256"]
+        require(not os.path.lexists(self.copy + "/failure.json"), "clone_failure")
+        original, owned = verify_clone_receipt(
+            h.parse(_pinned(h.read(self.copy + "/receipt.json", 4096), p["copy_receipt_sha256"])),
+            h.parse(h.read(self.copy + "/complete.json", 4096)),
+            h.parse(h.read(self.copy + "/intent.json", 4096)),
+            h.read(self.copy + "/work/ocean.stdout", 65536),
+            p,
+            self.subject,
+            self.route["ota"]["generation_operation_id"],
         )
         require(
-            h.parse(raw)
-            == dict(
-                status="VERIFIED_OWNED_COPY",
-                operation_id=self.subject["owned_copy_operation_id"],
-                source_library_tree_sha256=p["source_library_tree_sha256"],
-                owned_library=CHILD,
-                owned_library_tree_sha256=p["owned_library_tree_sha256"],
-                dut=self.subject["owned_before_view_tree_sha256"],
-                symbol=p["owned_symbol_tree_sha256"],
-                tb=self.subject["owned_before_testbench_tree_sha256"],
-            ),
-            "copy_custody",
+            self.tree(self.source) == original["strict_library"]
+            and self.tree(CHILD_STATE) == owned["state"],
+            "clone_retained_source_and_state",
         )
         self._source_guard()
         capacity = self._capacity()
         session.check()
         return capacity
 
-    def library_lines(self, extra=None):
-        rt = self.rt
-        libraries = [
-            (row["name"], row["path"])
-            for row in self.analysis["libraries"]
-            if row["name"] != SOURCE
-        ]
-        names = set(name for name, _ in libraries)
+    def _registered_libraries(self):
+        libraries = self.analysis["libraries"]
+        rows = dict((row["name"], row) for row in libraries)
         require(
-            len(libraries) == len(names) == 6
-            and not names.intersection((SOURCE, CHILD, "cdsDefTechLib", "MCP_GREL_Work")),
+            len(libraries) == 5
+            and set(rows) == set(("analogLib", "basic", "gpdk090", "cdsDefTechLib", SOURCE)),
             "fixed_libraries",
         )
-        libraries += [
-            (SOURCE, self.source),
-            (CHILD, self.owned),
-            ("cdsDefTechLib", self.pin["technology_path"]),
-        ]
+        tech, source = rows["cdsDefTechLib"], rows[SOURCE]
+        require(
+            (tech["path"], tech["tree_sha256"])
+            == (self.pin["technology_path"], self.pin["technology_tree_sha256"])
+            and (source["path"], source["tree_sha256"])
+            == (self.source, self.pin["source_library_tree_sha256"])
+            and rows["gpdk090"]["tree_sha256"] == self.legacy.SIZING_PDK_TREE_SHA256,
+            "registered_library_pins",
+        )
+        return libraries
+
+    def library_lines(self, extra=None):
+        rt = self.rt
+        libraries = [(row["name"], row["path"]) for row in self._registered_libraries()]
+        libraries.append((CHILD, self.owned))
         if extra is not None:
             require(extra[0] == "MCP_GREL_Work", "netlist_library")
             libraries.append(extra)

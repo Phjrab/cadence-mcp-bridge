@@ -279,6 +279,143 @@ def test_pinned_phase_wire_and_actual_legacy_assets(axis):
         ota.read_request(raw, digest, ota.PHASES[0], 1900000000)
 
 
+def test_library_maps_use_exact_ota_registration_and_map_tech_once():
+    scope, fields = fixture("w")
+    pin = json.loads(fields["native_safety"])
+    job = object.__new__(ota._OtaJob)
+    job.pin, job.legacy = pin, legacy
+    job.source, job.owned = ota.SOURCE_PATH, ota.CHILD_PATH
+    job.rt = SimpleNamespace(
+        rendering=SimpleNamespace(token=str),
+        copying=SimpleNamespace(path=str),
+    )
+    rows = [
+        dict(name="analogLib", path="/eda/analogLib", tree_sha256=_DIGEST),
+        dict(name="basic", path="/eda/basic", tree_sha256=_DIGEST),
+        dict(name="gpdk090", path="/eda/gpdk090", tree_sha256=legacy.SIZING_PDK_TREE_SHA256),
+        dict(
+            name="cdsDefTechLib",
+            path=pin["technology_path"],
+            tree_sha256=pin["technology_tree_sha256"],
+        ),
+        dict(name=ota.SOURCE, path=ota.SOURCE_PATH, tree_sha256=pin["source_library_tree_sha256"]),
+    ]
+    job.analysis = {"libraries": rows}
+    expected = [f"DEFINE {row['name']} {row['path']}".encode("ascii") for row in rows] + [
+        f"DEFINE {ota.CHILD} {ota.CHILD_PATH}".encode("ascii")
+    ]
+    assert job.library_lines().splitlines() == expected
+    assert job.library_lines(("MCP_GREL_Work", "/job/library")).splitlines() == [
+        *expected,
+        b"DEFINE MCP_GREL_Work /job/library",
+    ]
+    for altered in (rows[:-1], [*rows[:-1], rows[3]], [*rows, rows[3]]):
+        job.analysis["libraries"] = altered
+        with pytest.raises(ValueError, match="fixed_libraries"):
+            job.library_lines()
+    job.analysis["libraries"] = rows
+    rows[3]["tree_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="registered_library_pins"):
+        job.library_lines()
+    assert scope["subject"]["owned_library"] == ota.CHILD
+
+
+def clone_fixture():
+    """Retain the producer's field names and canonical three-leaf shape."""
+    scope, fields = fixture("w")
+    pin = json.loads(fields["native_safety"])
+    subject = scope["subject"]
+    original = dict(
+        library=pin["source_library_tree_sha256"],
+        strict_library="f" * 64,
+        dut=pin["source_dut_tree_sha256"],
+        symbol=pin["source_symbol_tree_sha256"],
+        bench=pin["source_tb_tree_sha256"],
+        state=pin["source_ade_tree_sha256"],
+    )
+    owned = dict(
+        library="e" * 64,
+        strict_library=pin["owned_library_tree_sha256"],
+        dut=subject["owned_before_view_tree_sha256"],
+        symbol=pin["owned_symbol_tree_sha256"],
+        bench=subject["owned_before_testbench_tree_sha256"],
+        state="d" * 64,
+    )
+    intent = dict(scope_sha256=_DIGEST, operation_id=COPY, retry=False)
+    stdout = f"OTA17_CANDIDATE_BENCH_RETARGETED|{COPY}\n".encode("ascii")
+    receipt = dict(
+        status="OTA17_OWNED_CLONE_RETARGETED",
+        operation_id=COPY,
+        scope_sha256=intent["scope_sha256"],
+        intent_sha256=_sha(_canonical(intent)),
+        original_trees=original,
+        owned_trees=owned,
+        owned_library=ota.CHILD,
+        owned_state=ota.CHILD_STATE,
+        original_ac_operation_id="0eb80e67-a677-4910-9b2e-951e1c3262a9",
+        original_dc_operation_id="8f035715-c7a7-4e23-83d6-e521ad85c893",
+        stdout_sha256=_sha(stdout),
+        ocean=1,
+        spectre=0,
+        reservations=0,
+    )
+    pin["copy_receipt_sha256"] = _sha(_canonical(receipt))
+    complete = dict(receipt_sha256=pin["copy_receipt_sha256"])
+    return receipt, complete, intent, stdout, pin, subject
+
+
+def test_original_clone_journal_requires_completion_marker_and_owned_tree():
+    receipt, complete, intent, stdout, pin, subject = clone_fixture()
+    args = (receipt, complete, intent, stdout, pin, subject, GENERATION)
+    assert ota.verify_clone_receipt(*args) == (receipt["original_trees"], receipt["owned_trees"])
+    for index, changed, message in (
+        (1, dict(receipt_sha256="0" * 64), "clone_journal"),
+        (2, dict(intent, retry=True), "clone_journal"),
+        (3, stdout + stdout, "clone_operation_evidence"),
+        (5, dict(subject, owned_before_view_tree_sha256="0" * 64), "clone_tree_binding"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            ota.verify_clone_receipt(*args[:index], changed, *args[index + 1 :])
+
+
+def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypatch):
+    receipt, complete, intent, stdout, pin, subject = clone_fixture()
+    job = object.__new__(ota._OtaJob)
+    job.pin, job.subject = pin, subject
+    job.scope, job.route = (
+        {"valid_until_unix": 2000000000},
+        {"ota": {"generation_operation_id": GENERATION}},
+    )
+    job.copy, job.owned, job.source = "/job/copy", ota.CHILD_PATH, ota.SOURCE_PATH
+    job.confirmations, job.digest, job.approval = "/job/confirmations", _DIGEST, b"approval"
+    readers = {
+        job.copy + "/receipt.json": _canonical(receipt),
+        job.copy + "/intent.json": _canonical(intent),
+        job.copy + "/complete.json": _canonical(complete),
+        job.copy + "/work/ocean.stdout": stdout,
+        job.confirmations + "/" + job.digest + ".json": job.approval,
+    }
+    job.h = SimpleNamespace(read=lambda path, limit: readers[path], parse=json.loads)
+    job.rt = SimpleNamespace(
+        root="/job",
+        read_check=lambda route: None,
+        copying=SimpleNamespace(owned_parent=lambda path: None),
+        gate=SimpleNamespace(storage=SimpleNamespace(active_eda=lambda *args: False)),
+    )
+    trees = {
+        job.source: receipt["original_trees"]["strict_library"],
+        ota.CHILD_STATE: receipt["owned_trees"]["state"],
+    }
+    job.tree = trees.__getitem__
+    job._source_guard, job._capacity = lambda: None, lambda: 3145728
+    session = SimpleNamespace(check=lambda: None)
+    monkeypatch.setattr(ota.time, "time", lambda: 1900000000)
+    assert job.guard(session) == 3145728
+    trees[ota.CHILD_STATE] = "0" * 64
+    with pytest.raises(ValueError, match="clone_retained_source_and_state"):
+        job.guard(session)
+
+
 def test_independent_capture_receipts_and_no_source_writes(tmp_path, monkeypatch):
     scope, fields = fixture("w")
     raw, digest = wire(scope, fields)
