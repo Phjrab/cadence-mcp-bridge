@@ -10,13 +10,21 @@ from pydantic import Field, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.parameter_changes import mos_multiplicity_factors
-from cadence_mcp_bridge.registered_mos_edit import MosProperty, MosPropertyValue
+from cadence_mcp_bridge.ota_reopen_evidence import parse_ota_reopen_properties
+from cadence_mcp_bridge.parameter_changes import _checked, mos_multiplicity_factors
+from cadence_mcp_bridge.registered_mos_edit import (
+    _GEOMETRY,
+    MosProperty,
+    MosPropertyValue,
+    RegisteredMosEditBinding,
+    RegisteredMosEditProvider,
+)
 from cadence_mcp_bridge.registered_mos_sizing import (
     _NETLIST_KEYS,
     MosSizingDimensions,
     MosSizingLength,
     MosSizingPlan,
+    MosSizingValues,
     RegisteredMosSizingRoute,
     RegisteredMosSizingService,
     _check_input,
@@ -24,6 +32,7 @@ from cadence_mcp_bridge.registered_mos_sizing import (
     _NetlistControls,
     _observed_dimensions,
 )
+from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import BindingName, Digest, VariableModel
 
 _SPECTRE_MOS = re.compile(r"([^ ]+) \(([^()]+)\) (gpdk090_[np]mos1v) (.+)")
@@ -51,6 +60,8 @@ class OtaMosBaseline(VariableModel):
 
     generation_operation_id: OperationId
     reopen_receipt_sha256: Digest
+    reopen_stdout_sha256: Digest
+    dut_plan_sha256: Digest
     netlist_receipt_sha256: Digest
     baseline_dc_op_receipt_sha256: Digest
     baseline_ac_receipt_sha256: Digest
@@ -121,6 +132,50 @@ class RegisteredOtaMosSizingRoute(RegisteredMosSizingRoute):
 class RegisteredOtaMosSizingService(RegisteredMosSizingService):
     """Use the same durable edit protocol with an OTA-specific Netlist projection."""
 
+    def __init__(
+        self,
+        binding: RegisteredMosEditBinding,
+        route: RegisteredOtaMosSizingRoute,
+        child: RevisionBinding,
+        requested: MosSizingValues,
+        baseline_input: bytes,
+        provider: RegisteredMosEditProvider,
+        *,
+        expected_binding_sha256: str,
+        baseline_reopen_stdout: bytes,
+    ) -> None:
+        route = _checked(route)
+        ota = route.ota
+        self._baseline_properties = parse_ota_reopen_properties(
+            baseline_reopen_stdout,
+            stdout_sha256=ota.reopen_stdout_sha256,
+            plan_sha256=ota.dut_plan_sha256,
+            cell=route.source_cell,
+            instance_names=tuple(device.name for device in ota.devices),
+        )
+        target_name = route.target.netlist_path.split("/")[1]
+        if route.before != self._baseline_properties[target_name]:
+            raise ValueError("OTA registered target differs from original detached OA/CDF readback")
+        for row in ota.devices:
+            props = self._baseline_properties[row.name]
+            dimensions = _observed_dimensions(props, include_m=True)
+            if (dimensions.w, dimensions.l, dimensions.m, props["model"].cdf_value) != (
+                row.dimensions.w.in_nm(),
+                row.dimensions.l.in_nm(),
+                row.dimensions.m,
+                f"gpdk090_{row.master_cell}",
+            ):
+                raise ValueError("OTA device differs from original detached OA/CDF readback")
+        super().__init__(
+            binding,
+            route,
+            child,
+            requested,
+            baseline_input,
+            provider,
+            expected_binding_sha256=expected_binding_sha256,
+        )
+
     def _project_input(
         self, raw: bytes, properties: dict[MosProperty, MosPropertyValue]
     ) -> tuple[_NetlistControls, list[str], dict[str, str]]:
@@ -134,7 +189,7 @@ class RegisteredOtaMosSizingService(RegisteredMosSizingService):
         ):
             raise ValueError("OTA sizing operation and copy must be distinct from generation")
         controls, _, options = _check_input(route.target, raw, properties)
-        fixed = _ota_fixed_statements(route, self.plan, raw)
+        fixed = _ota_fixed_statements(route, self.plan, raw, self._baseline_properties)
         return controls, fixed, options
 
 
@@ -149,7 +204,10 @@ def _check_ota_plan(route: RegisteredOtaMosSizingRoute, plan: MosSizingPlan) -> 
 
 
 def _ota_fixed_statements(
-    route: RegisteredOtaMosSizingRoute, plan: MosSizingPlan, raw: bytes
+    route: RegisteredOtaMosSizingRoute,
+    plan: MosSizingPlan,
+    raw: bytes,
+    baseline_properties: dict[str, dict[MosProperty, MosPropertyValue]],
 ) -> list[str]:
     """Permit only device order and numeric spelling inside the registered OTA block."""
     _, _, _, static = partition_input(raw)  # type: ignore[no-untyped-call]
@@ -200,6 +258,11 @@ def _ota_fixed_statements(
                 f"{length.in_nm().value}n"
             ):
                 raise ValueError("OTA Netlist differs from a held W/L dimension")
+        if name != target and any(
+            numbers[key] != _engineering(baseline_properties[name][key].cdf_value)
+            for key in _GEOMETRY
+        ):
+            raise ValueError("OTA Netlist changed a sibling junction geometry")
         with localcontext() as context:
             context.prec = 128
             unchanged = sorted(
