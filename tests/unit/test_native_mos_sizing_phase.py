@@ -14,6 +14,8 @@ import pytest
 from cadence_mcp_bridge import _amp_pm0_default_phase as support
 from cadence_mcp_bridge import _mos_cdf_call_contract as callback
 from cadence_mcp_bridge import _mos_pmos_width_callback as width_callback
+from cadence_mcp_bridge import _mos_wlm_callback as wlm_callback
+from cadence_mcp_bridge import _mos_wlm_phase as wlm_phase
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest
 from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
 
@@ -343,3 +345,168 @@ def test_sizing_time_is_bound_to_ordered_completed_edges() -> None:
     assert guest.sizing_edit_timing(start + first + end + last.replace(b"321", b"399")) is None
     wrong_step = last.replace(b"SCH_CHECK", b"DB_SAVE")
     assert guest.sizing_edit_timing(start + first + end + wrong_step) is None
+
+
+def _wlm_scope(axes: str = "lwm") -> dict[str, Any]:
+    scope = _width_scope()
+    route, plan = scope["route_qualification"], scope["plan"]
+    current = {"w": {"value": "350", "unit": "nm"}, "l": {"value": "100", "unit": "nm"}, "m": 1}
+    chosen = {"w": {"value": "16000", "unit": "nm"}, "l": {"value": "1000", "unit": "nm"}, "m": 6}
+    route["support"].update(
+        lifecycle=guest.WLM_LIFECYCLE,
+        adapter_sha256=guest.WLM_RENDERER_SHA256,
+        l={},
+        m=[1, 6],
+    )
+    plan.update(
+        current=current,
+        requested={axis: chosen[axis] for axis in axes},
+        expected={axis: chosen[axis] if axis in axes else value for axis, value in current.items()},
+        changed=list(axes),
+        allowed_derived=list(wlm_phase.wlm_overrides(guest, axes)[len(axes) :]),
+    )
+    return scope
+
+
+def test_wlm_callback_frames_verify_only_selected_ordered_pinned_bodies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert hashlib.sha256(Path(getfile(wlm_callback)).read_bytes()).hexdigest() == (
+        guest.WLM_HASH_CHILD_SHA256
+    )
+    bodies = {b"l": b"a()\nb()", b"w": b"width()", b"m": b"m()"}
+    for axis, body in bodies.items():
+        monkeypatch.setitem(wlm_callback.CALLBACKS, axis, hashlib.sha256(body).hexdigest().encode())
+
+    def frame(axes: bytes, master: bytes = b"pmos1v") -> bytes:
+        return (
+            b"headless_wlm_v1|"
+            + master
+            + b"|"
+            + axes
+            + b"\n"
+            + b"".join(
+                b"%s|%d\n%s\n" % (axis, len(bodies[axis]), bodies[axis])
+                for axis in (bytes((key,)) for key in axes)
+            )
+            + b"END\n"
+        )
+
+    assert wlm_callback.check_callbacks(io.BytesIO(frame(b"lwm")))
+    assert wlm_callback.check_callbacks(io.BytesIO(frame(b"wm", b"nmos1v")))
+    assert wlm_callback.check_callbacks(io.BytesIO(frame(b"m")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"wlm")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"ll")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"m", b"pmos2v")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"m").replace(b"m()", b"x()")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"m").replace(b"m|3", b"m|4097")))
+    assert not wlm_callback.check_callbacks(io.BytesIO(frame(b"m")[:-4]))
+
+
+def test_wlm_route_and_readback_reject_wrong_axes_target_and_geometry() -> None:
+    scope = _wlm_scope()
+    route = guest.sizing_route(scope)
+    before = route["before"]
+    expected = scope["plan"]["expected"]
+    saved = dict(
+        before,
+        w=_row("16u", "lengthMetric"),
+        fw=_row("16000n", "lengthMetric"),
+        l=_row("1u", "lengthMetric"),
+        m=_row("6"),
+    )
+    saved["as"] = _row("5f")
+    wlm_phase.wlm_readback(guest, before, saved, expected, ("l", "w", "m"))
+    for name, row in (
+        ("m", _row("1")),
+        ("fw", _row("15999n", "lengthMetric")),
+        ("l", _row("999n", "lengthMetric")),
+        ("fingers", _row("2")),
+        ("dfm", _row("Wide")),
+    ):
+        with pytest.raises(ValueError):
+            wlm_phase.wlm_readback(
+                guest, before, dict(saved, **{name: row}), expected, ("l", "w", "m")
+            )
+    m_only = _wlm_scope("m")
+    mono = guest.sizing_route(m_only)
+    observed = dict(mono["before"], m=_row("6"))
+    wlm_phase.wlm_readback(guest, mono["before"], observed, m_only["plan"]["expected"], ("m",))
+    with pytest.raises(ValueError, match="sizing_property_conservation"):
+        observed["as"] = _row("5f")
+        wlm_phase.wlm_readback(guest, mono["before"], observed, m_only["plan"]["expected"], ("m",))
+    scope["plan"]["changed"] = ["w", "l", "m"]
+    with pytest.raises(ValueError, match="wlm_change_set"):
+        guest.sizing_route(scope)
+    scope = _wlm_scope()
+    scope["route_qualification"]["support"]["m"] = [1]
+    with pytest.raises(ValueError, match="wlm_multiplier_admission"):
+        guest.sizing_route(scope)
+    scope = _wlm_scope()
+    scope["route_qualification"]["target"]["netlist_terminals"][-1] = "vss"
+    with pytest.raises(ValueError, match="wlm_route"):
+        guest.sizing_route(scope)
+
+
+def test_wlm_render_uses_batched_properties_and_distinct_read_only_reopen() -> None:
+    scope = _wlm_scope()
+    job = guest.Source9MosJob.__new__(guest.Source9MosJob)
+    job.scope = scope
+    job.sizing = (b"fixed adapter", b"fixed child")
+    job.wlm_axes = ("l", "w", "m")
+    job.wlm_phase = wlm_phase
+    job.route = guest.sizing_route(scope)
+    job.library = scope["subject"]["owned_library"]
+    job.owned = "/home/buet/owned"
+    job.source = "/home/buet/source"
+    job.source_alias = guest.SOURCE
+    job.operation = "00e78318-9c30-4064-9233-5d7d9827ff70"
+    values = job.values("/home/buet/job/edit/work")
+    before, after = values["@BEFORE@"], values["@AFTER@"]
+    assert before.count("cdfGetInstCDF(inst)") == 1
+    assert set(re.findall(r'\("([a-z]+)"', before)) == set(guest.PROPERTIES)
+    held, expected = after.split("let((param prop", 1)
+    assert after.count("cdfGetInstCDF(inst)") == 1
+    assert set(re.findall(r'\("([a-z]+)"', held)) == {"fingers", "nf", "model", "dfm"}
+    assert '("l" "1000n") ("w" "16000n") ("fw" "16000n") ("m" "6")' in expected
+    edit = guest.render(guest.COMMON + wlm_phase.VERIFY_WLM_CALLBACKS + guest.SIZING_EDIT, values)
+    reopen = guest.render(guest.COMMON + guest.REOPEN, values)
+    assert b'expected=\'("l" "w" "m")' in edit
+    assert b'"pmos1v"' in edit
+    assert b"param~>callback==body" in edit
+    assert b"/home/buet/job/edit/work/verify-wlm-callbacks.py" in edit
+    assert b"mcpMosApplyWL(" not in reopen
+    assert b"dbSave(" not in reopen
+
+
+def test_wlm_phase_asset_is_separately_pinned_within_existing_guest_limit() -> None:
+    scope = _wlm_scope()
+    child = Path(getfile(wlm_callback)).read_bytes()
+    phase = Path(getfile(wlm_phase)).read_bytes()
+    adapter = b"compiled fixed renderer"
+    assert len(Path(getfile(guest)).read_bytes()) <= 65_536
+    assets = {
+        "adapter": adapter.decode(),
+        "adapter_sha256": hashlib.sha256(adapter).hexdigest(),
+        "hash_child": child.decode(),
+        "hash_child_sha256": guest.WLM_HASH_CHILD_SHA256,
+        "phase": phase.decode(),
+        "phase_sha256": guest.WLM_PHASE_SHA256,
+    }
+
+    def decode_assets() -> tuple[bytes, bytes, bytes]:
+        raw = support.canonical(assets)
+        scope["sizing_sha256"] = hashlib.sha256(raw).hexdigest()
+        packet = {"sizing_base64": base64.b64encode(raw).decode()}
+        value: tuple[bytes, bytes, bytes] = guest.read_sizing_assets(support, packet, scope)
+        return value
+
+    assert decode_assets() == (adapter, child, phase)
+    assets["phase"] += "\n"
+    assets["phase_sha256"] = hashlib.sha256(assets["phase"].encode()).hexdigest()
+    with pytest.raises(ValueError, match="wlm_phase_identity"):
+        decode_assets()
+    del assets["phase"]
+    with pytest.raises(ValueError, match="sizing_asset_fields"):
+        decode_assets()

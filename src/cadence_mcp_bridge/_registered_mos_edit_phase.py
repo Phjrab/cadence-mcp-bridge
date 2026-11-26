@@ -35,6 +35,10 @@ SIZING_RENDERER_SHA256 = "ac0b45c26c0b76ce593bea1d3621788ab4d94f165854530cb811ed
 SIZING_HASH_CHILD_SHA256 = "deacdd769ca0bbcb6d2035450eb6ff511298a00cbb636630e46d3109a884d9f6"
 SIZING_WIDTH_HASH_CHILD_SHA256 = "12fa3fe0b4449a66aa33895d9f680aeef5b4921f9fdfd4252b6f482ffd8d3061"
 SIZING_WIDTH_ADAPTER_SHA256 = "832b0128002048d2b6754116a20cbe7dfeb503df3a30bb21c0fba937326dfb23"
+WLM_LIFECYCLE = "headless_wlm_v1"
+WLM_RENDERER_SHA256 = "3e10394d73ec5398db6a1f78281d2c4542b99a450b8ce657deac20018be58559"
+WLM_HASH_CHILD_SHA256 = "739fec5aeb23ff976f7a41b44d83fba30e11952f49ec634c450f6919eb68489b"
+WLM_PHASE_SHA256 = "e4a018fcdd733e1e9fad400f987d80c28dcbfd4cfa96b7706a1178bf38e9a0d0"
 SIZING_SLOT_VERIFIER_SHA256 = "ee8b999a9cb95a3b8bcba2bc559931e1172713d65de51b7b4d397e37628e801d"
 SYSTEM_PYTHON_SHA256 = "388c3856ebba74fa1818478de7f19aa8b7ab3eb7a157f77d31adcc67229499e6"
 SIZING_PDK_TREE_SHA256 = "14976652b9e37c801b1d662fd02aa9cc3b612dfa6d467f9932b6795b10f01b9f"
@@ -413,10 +417,16 @@ def cdf_geometry(row, name):
     )
 
 
-def sizing_route(scope):
+def sizing_route(scope, wlm_phase=None):
     route, plan, subject = scope["route_qualification"], scope["plan"], scope["subject"]
     target = route["target"]
     support = route["support"]
+    if support.get("lifecycle") == WLM_LIFECYCLE:
+        if wlm_phase is None:
+            require(__name__ != "__main__", "wlm_fixed_phase_required")
+            from cadence_mcp_bridge import _mos_wlm_phase as wlm_phase
+        return wlm_phase.wlm_route(sys.modules[__name__], scope)
+    require(support.get("lifecycle") is None, "sizing_lifecycle")
     axis = sizing_axis(plan)
     held = "w" if axis == "l" else "l"
     master = "nmos1v" if axis == "l" else "pmos1v"
@@ -541,17 +551,27 @@ def sizing_readback(before, actual, expected, axis="l"):
         sizing_dimension(actual["fw"], expected["w"])
 
 
+def uses_wlm(scope):
+    return scope["route_qualification"]["support"].get("lifecycle") == WLM_LIFECYCLE
+
+
 def read_sizing_assets(helper, packet, scope):
     raw = read_encoded(packet, "sizing", 32768)
     assets = helper.parse(helper.pinned(raw, scope["sizing_sha256"]))
+    wlm_fields = uses_wlm(scope)
+    expected_fields = set(("adapter", "adapter_sha256", "hash_child", "hash_child_sha256"))
+    if wlm_fields:
+        expected_fields.update(("phase", "phase_sha256"))
+    require(set(assets) == expected_fields, "sizing_asset_fields")
+    if wlm_fields:
+        axis = None
+        expected_renderer, expected_child = WLM_RENDERER_SHA256, WLM_HASH_CHILD_SHA256
+    else:
+        axis = sizing_axis(scope["plan"])
+        expected_renderer = SIZING_RENDERER_SHA256
+        expected_child = SIZING_HASH_CHILD_SHA256 if axis == "l" else SIZING_WIDTH_HASH_CHILD_SHA256
     require(
-        set(assets) == set(("adapter", "adapter_sha256", "hash_child", "hash_child_sha256")),
-        "sizing_asset_fields",
-    )
-    axis = sizing_axis(scope["plan"])
-    expected_child = SIZING_HASH_CHILD_SHA256 if axis == "l" else SIZING_WIDTH_HASH_CHILD_SHA256
-    require(
-        scope["route_qualification"]["support"]["adapter_sha256"] == SIZING_RENDERER_SHA256
+        scope["route_qualification"]["support"]["adapter_sha256"] == expected_renderer
         and assets["hash_child_sha256"] == expected_child,
         "sizing_asset_identity",
     )
@@ -560,6 +580,11 @@ def read_sizing_assets(helper, packet, scope):
     adapter = helper.pinned(assets["adapter"].encode("ascii"), assets["adapter_sha256"])
     child = helper.pinned(assets["hash_child"].encode("ascii"), assets["hash_child_sha256"])
     require(0 < len(adapter) <= 12288 and 0 < len(child) <= 8192, "sizing_asset_bounds")
+    if wlm_fields:
+        require(assets["phase_sha256"] == WLM_PHASE_SHA256, "wlm_phase_identity")
+        phase = helper.pinned(assets["phase"].encode("ascii"), WLM_PHASE_SHA256)
+        require(0 < len(phase) <= 12288, "wlm_phase_size")
+        return adapter, child, phase
     return adapter, child
 
 
@@ -763,7 +788,7 @@ def skill_mutation(route, master):
     ).decode("ascii")
 
 
-def skill_check(rows, fields=PROPERTIES):
+def skill_check(rows, fields=PROPERTIES, batch_cdf=False, expected_checks=""):
     result = []
     for key in fields:
         row = rows[key]
@@ -782,15 +807,25 @@ def skill_check(rows, fields=PROPERTIES):
             )
             + ")"
         )
-    return (
+    cdf = "batchCdf" if batch_cdf else "cdfGetInstCDF(inst)"
+    source = (
         "foreach(row '(" + " ".join(result) + ")\n"
         " let((prop param)\n"
-        "  prop=dbFindProp(inst car(row)) param=cdfFindParamByName(cdfGetInstCDF(inst) car(row))\n"
+        "  prop=dbFindProp(inst car(row)) param=cdfFindParamByName(" + cdf + " car(row))\n"
         "  mosRequire(equal(list(if(prop then prop~>valueType else nil)\n"
         "     if(prop then prop~>value else nil)\n"
         "     if(param then param~>type else nil) if(param then param~>units else nil)\n"
         "     if(param then param~>value else nil)) cdr(row)))))"
     )
+    if batch_cdf:
+        return (
+            "let((batchCdf) batchCdf=cdfGetInstCDF(inst) mosRequire(batchCdf)\n"
+            + source
+            + "\n"
+            + expected_checks
+            + ")"
+        )
+    return source
 
 
 def render(template, values):
@@ -861,6 +896,8 @@ def sizing_edit_timing(raw):
 class Source9MosJob(object):
     sizing = None
     axis = "l"
+    wlm_axes = ()  # type: tuple[str, ...]
+    wlm_phase = None  # type: types.ModuleType | None
 
     def __init__(
         self, rt, helper, operator, scope, pin, digest, approval, collector, sizing=None, slot=None
@@ -870,9 +907,16 @@ class Source9MosJob(object):
         self.subject = scope["subject"]
         self.sizing = sizing
         self.slot = slot
-        self.route = sizing_route(scope) if sizing is not None else exact_route(scope)
         if sizing is not None:
-            self.axis = sizing_axis(scope["plan"])
+            if uses_wlm(scope):
+                self.wlm_axes = tuple(scope["plan"]["changed"])
+                self.wlm_phase = types.ModuleType("registered_mos_wlm_fixed_phase")
+                eval(compile(sizing[2], "_mos_wlm_phase.py", "exec"), self.wlm_phase.__dict__)
+            else:
+                self.axis = sizing_axis(scope["plan"])
+        self.route = (
+            sizing_route(scope, self.wlm_phase) if sizing is not None else exact_route(scope)
+        )
         self.operation = self.subject["operation_id"]
         copy_id = self.subject["owned_copy_operation_id"]
         require(
@@ -893,6 +937,7 @@ class Source9MosJob(object):
         require(
             re.match(r"^CmosLong[A-Za-z0-9]{3,40}\Z", self.source_alias)
             and self.source_alias != self.library
+            and (not self.wlm_axes or self.source_alias == SOURCE)
             and (self.sizing is None or self.axis != "w" or self.source_alias == SOURCE),
             "distinct_original_and_owned_aliases",
         )
@@ -1103,12 +1148,14 @@ class Source9MosJob(object):
         journal = type("RegisteredMosEditJob", (object,), dict(job=self.job, work=work))()
         rt.eda.program(session, journal, argv, phase, 45, limit)
         require(not self.h.read(work + "/" + phase + ".stderr", 32768), "ocean_stderr")
-        output = self.h.read(work + "/" + phase + ".stdout", 65536).splitlines()
+        raw = self.h.read(work + "/" + phase + ".stdout", 65536)
+        output = raw.splitlines()
         require(
             all(output.count(mark.encode("ascii")) == 1 for mark in markers), "ocean_phase_markers"
         )
         positions = [output.index(mark.encode("ascii")) for mark in markers]
         require(positions == sorted(positions), "ocean_phase_order")
+        return raw
 
     def values(self, work):
         if self.sizing is None:
@@ -1117,13 +1164,23 @@ class Source9MosJob(object):
             after = self.route["after"]
             after_fields = PROPERTIES
         else:
-            master = "nmos1v" if self.axis == "l" else "pmos1v"
-            overrides = SIZING_OVERRIDES if self.axis == "l" else WIDTH_SIZING_OVERRIDES
+            if self.wlm_axes:
+                master = self.route["target"]["instance"]["master_cell"]
+                overrides = self.wlm_phase.wlm_overrides(sys.modules[__name__], self.wlm_axes)
+            else:
+                master = "nmos1v" if self.axis == "l" else "pmos1v"
+                overrides = SIZING_OVERRIDES if self.axis == "l" else WIDTH_SIZING_OVERRIDES
             omit = "'(" + " ".join(skill_token(name) for name in overrides) + ")"
             mutation = "mosRequire(mcpMosApplyWL(inst)==t)"
             after = self.route["before"]
             after_fields = tuple(name for name in PROPERTIES if name not in overrides)
         slot, rail = SLOTS[master]
+        batch = bool(self.wlm_axes)
+        expected_checks = (
+            self.wlm_phase.wlm_skill_expected(self.scope["plan"]["expected"], self.wlm_axes)
+            if batch
+            else ""
+        )
         return {
             "@LIB@": self.library,
             "@OWNED@": self.owned,
@@ -1131,8 +1188,12 @@ class Source9MosJob(object):
             "@SOURCEALIAS@": self.source_alias,
             "@WORK@": work,
             "@OP@": self.operation,
-            "@BEFORE@": skill_check(self.route["before"]),
-            "@AFTER@": skill_check(after, after_fields),
+            "@BEFORE@": skill_check(self.route["before"], batch_cdf=batch),
+            "@AFTER@": skill_check(
+                after, after_fields, batch_cdf=batch, expected_checks=expected_checks
+            ),
+            "@AXES@": " ".join(skill_token(axis) for axis in self.wlm_axes),
+            "@AXISTOKEN@": "".join(self.wlm_axes),
             "@OVERRIDES@": omit,
             "@MUTATION@": mutation,
             "@TARGET@": slot,
@@ -1150,7 +1211,15 @@ class Source9MosJob(object):
             footprint_sha256=self.h.sha(self.h.read(work + "/footprint.txt", 65536)),
             properties=read_properties(raw),
         )
-        if self.sizing is not None and expected == "after":
+        if self.wlm_axes and expected == "after":
+            self.wlm_phase.wlm_readback(
+                sys.modules[__name__],
+                self.route["before"],
+                result["properties"],
+                self.scope["plan"]["expected"],
+                self.wlm_axes,
+            )
+        elif self.sizing is not None and expected == "after":
             sizing_readback(
                 self.route["before"],
                 result["properties"],
@@ -1254,7 +1323,7 @@ class Source9MosJob(object):
         markers = []
         prefix = COMMON
         if self.sizing is not None:
-            adapter, child = self.sizing
+            adapter, child = self.sizing[:2]
             interpreter = os.path.realpath("/usr/bin/python")
             require(
                 interpreter.startswith("/usr/bin/")
@@ -1262,7 +1331,10 @@ class Source9MosJob(object):
                 and self.rt.modules["probe"].digest_file(interpreter) == SYSTEM_PYTHON_SHA256,
                 "sizing_hash_interpreter",
             )
-            if self.axis == "l":
+            if self.wlm_axes:
+                callback_program = self.wlm_phase.VERIFY_WLM_CALLBACKS
+                child_path = work + "/verify-wlm-callbacks.py"
+            elif self.axis == "l":
                 callback_program = VERIFY_LENGTH_CALLBACK
                 child_path = work + "/verify-nmos-length-callback.py"
             else:
@@ -1271,10 +1343,12 @@ class Source9MosJob(object):
             self.rt.eda.write(child_path, child)
             require(self.h.read(child_path, 8192) == child, "sizing_child_readback")
             prefix += callback_program + adapter.decode("ascii")
+            markers.append("MCP_MOS_WL_STAGE|INIT")
+            markers.extend(
+                "MCP_MOS_WL_STAGE|FIELD|" + axis for axis in (self.wlm_axes or (self.axis,))
+            )
             markers.extend(
                 (
-                    "MCP_MOS_WL_STAGE|INIT",
-                    "MCP_MOS_WL_STAGE|FIELD|" + self.axis,
                     "MCP_MOS_WL_STAGE|COMMIT",
                     "MCP_MOS_WL_STAGE|DONE",
                     "MCP_MOS_WL_READY_FOR_SAVE_CHECK",
@@ -1284,7 +1358,7 @@ class Source9MosJob(object):
             prefix + (SIZING_EDIT if self.sizing is not None else EDIT), self.values(work)
         )
         markers.append("C6_MOS_EDIT_SAVED|" + self.operation)
-        self.run(
+        output = self.run(
             session,
             work,
             program,
@@ -1292,6 +1366,15 @@ class Source9MosJob(object):
             "edit",
             markers,
         )
+        if self.sizing is not None:
+            self.save_document(
+                work + "/edit-timing.json",
+                dict(
+                    operation_id=self.operation,
+                    stdout_sha256=self.h.sha(output),
+                    samples=sizing_edit_timing(output),
+                ),
+            )
         saved = self.views(self.owned)
         require(
             saved["dut"] != before["dut"]
@@ -1460,6 +1543,7 @@ def main():
             not uses_slot
             or (
                 calculated
+                and not uses_wlm(scope)
                 and sizing_axis(scope["plan"]) == "l"
                 and helper.hex_digest(scope["slot_manifest_sha256"])
             )
