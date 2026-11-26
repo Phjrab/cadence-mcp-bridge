@@ -253,11 +253,21 @@ def _export_analysis_source(
     }
     registration_raw = read_candidate_document(registered, expected_sha256=registration_sha)
     if recovery:
+        from cadence_mcp_bridge.research_generation_ota_recovery import (
+            recover_ota_generation_analysis_source,
+        )
         from cadence_mcp_bridge.research_generation_recovery import (
             recover_retained_generation_source,
         )
 
-        recovered = recover_retained_generation_source(
+        version = json.loads(documents["recovery_enrollment"])["schema_version"]
+        recover_source = (
+            recover_ota_generation_analysis_source
+            if type(version) is int and version == 2
+            else recover_retained_generation_source
+        )
+
+        recovered = recover_source(
             context,
             registration_raw,
             directory,
