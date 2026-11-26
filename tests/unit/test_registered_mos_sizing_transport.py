@@ -451,7 +451,9 @@ def test_wlm_enrollment_requires_an_exact_registered_multiplier_set(enrolled):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("master", ["nmos1v", "pmos1v"])
-async def test_wlm_operator_packets_pin_changed_axes_and_keep_held_geometry(enrolled, master):
+async def test_wlm_operator_packets_pin_changed_axes_and_keep_held_geometry(
+    enrolled, master, monkeypatch
+):
     context, candidate, directory, phases = enrolled
     path = context.binding.pmos_default_change_binding
     enrollment = json.loads(path.read_bytes())
@@ -461,6 +463,8 @@ async def test_wlm_operator_packets_pin_changed_axes_and_keep_held_geometry(enro
     child = package.joinpath("_mos_wlm_callback.py").read_bytes()
     renderer = package.joinpath("mos_wlm_skill.py").read_bytes()
     guest = package.joinpath("_registered_mos_edit_phase.py").read_bytes()
+    phase_asset = package.joinpath("_mos_wlm_phase.py").read_bytes()
+    assert _sha(phase_asset) == guest_contract.WLM_PHASE_SHA256
     support = enrollment["route_qualification"]["support"]
     support.update(lifecycle="headless_wlm_v1", m=[1, 6], w={}, adapter_sha256=_sha(renderer))
     width = {"value": "1500", "unit": "nm"}
@@ -525,10 +529,18 @@ async def test_wlm_operator_packets_pin_changed_axes_and_keep_held_geometry(enro
             _, emitted = service._provider._prepare(service._binding, phase, prior)
             packet = json.loads(emitted[len(guest) :])
             scope = json.loads(base64.b64decode(packet["scope_base64"], validate=True))
-            program, actual_child = guest_contract.read_sizing_assets(guest_support, packet, scope)
+            program, actual_child, actual_phase = guest_contract.read_sizing_assets(
+                guest_support, packet, scope
+            )
             assert program == render_mos_wlm_skill(master, **changed)
             assert actual_child == child and "slot_verifier_base64" not in packet
+            assert actual_phase == phase_asset
             assert packet["previous_receipt_sha256"] == prior
+    with monkeypatch.context() as patch:
+        patch.setattr(guest_contract, "WLM_PHASE_SHA256", "0" * 64)
+        with pytest.raises(OperationRejected) as mismatch:
+            sizing.selected_mos_sizing(context)
+        assert mismatch.value.reason == "registered_mos_sizing_asset"
     assert not phases and not (directory / "registered-mos-intent.private.json").exists()
 
 

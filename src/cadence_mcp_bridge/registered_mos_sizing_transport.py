@@ -408,6 +408,14 @@ class RegisteredMosSizing:
             package.joinpath(child_name).read_bytes(),
             reg.hash_child_sha256,
         )
+        self._phase_asset = None
+        if reg.route_qualification.support.lifecycle == "headless_wlm_v1":
+            phase_pin = getattr(guest_contract, "WLM_PHASE_SHA256", None)
+            if not isinstance(phase_pin, str):
+                raise ValueError("Registered MOS guest does not support the W/L/m phase asset")
+            self._phase_asset = _asset(
+                package.joinpath("_mos_wlm_phase.py").read_bytes(), phase_pin, max_bytes=12_288
+            )
         self._context, self._directory, self._reg, self.enrollment_sha256 = (
             context,
             directory,
@@ -483,14 +491,18 @@ class RegisteredMosSizing:
                 width_nm=width,
                 width_field=reg.width_field if width is not None else None,
             )
-        sizing = _canonical(
-            {
-                "adapter": adapter.decode("ascii"),
-                "adapter_sha256": _sha(adapter),
-                "hash_child": self._hash_child.decode("ascii"),
-                "hash_child_sha256": reg.hash_child_sha256,
-            }
-        )
+        assets = {
+            "adapter": adapter.decode("ascii"),
+            "adapter_sha256": _sha(adapter),
+            "hash_child": self._hash_child.decode("ascii"),
+            "hash_child_sha256": reg.hash_child_sha256,
+        }
+        if self._phase_asset is not None:
+            assets.update(
+                phase=self._phase_asset.decode("ascii"), phase_sha256=_sha(self._phase_asset)
+            )
+        sizing = _canonical(assets)
+        _require(len(sizing) <= 32_768, "registered_mos_sizing_asset_bundle_size")
         subject = MosEditSubject(
             operation_id=slot.operation_id,
             owned_copy_operation_id=slot.owned_copy_operation_id,
