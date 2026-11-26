@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 from test_registered_mos_sizing import _fixture
-from test_registered_ota_mos_sizing import _ota_fixture
+from test_registered_ota_mos_sizing import _ota_fixture, _reopen_stdout
 
 from cadence_mcp_bridge import _amp_pm0_default_phase as guest_support
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
@@ -582,7 +582,7 @@ def test_sizing_cli_uses_same_enrollment_and_fails_closed(enrolled, capsys, tmp_
 @pytest.mark.asyncio
 @pytest.mark.parametrize("pmos_width", [False, True])
 async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
-    enrolled, monkeypatch, pmos_width
+    enrolled, monkeypatch, capsys, pmos_width
 ):
     context, _, directory, phases = enrolled
     binding_path = context.binding.pmos_default_change_binding
@@ -591,15 +591,74 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     legacy = original_model.model_dump(mode="json")
     assert legacy["schema_version"] == 4 and legacy["route"] == "registered_mos_sizing"
     assert "ota" not in legacy["route_qualification"] and "admitted_m" not in legacy
-    route, child, request, _, raw_input, reopen_stdout, _ = _ota_fixture(pmos_width=pmos_width)
+    route, child, request, _, raw_input, _, _ = _ota_fixture(pmos_width=pmos_width)
     package = files("cadence_mcp_bridge")
     renderer = package.joinpath("mos_wlm_skill.py").read_bytes()
     child_asset = package.joinpath("_mos_wlm_callback.py").read_bytes()
-    guest = package.joinpath("_registered_mos_edit_phase.py").read_bytes()
+    guest = sizing.ota_mos_sizing_supervisor()
+    namespace = {"__name__": "_test_fixed_ota_supervisor"}
+    exec(compile(guest, "_ota_mos_candidate_runtime.py", "exec"), namespace)
+    assert guest.endswith(sizing._OTA_MAIN_SUFFIX)
+    assert len(guest) <= 131_072
+    assert (
+        _sha(namespace["OTA_LEGACY_SOURCE"] + sizing._LEGACY_MAIN_SUFFIX) == sizing._OTA_BASE_SHA256
+    )
+    assert _sha(namespace["OTA_SKILL_SOURCE"]) == sizing._OTA_SKILL_SHA256
     document = json.loads(original)
+    # Keep synthetic MOS values while matching the separately registered native inventory.
+    dut = namespace["DUT"]
+    target = route.target
+    name = "PM2" if pmos_width else "NM0"
+    path = f"DUT/{name}"
+    selected = route.ota.devices[-1]
+    siblings = sorted(namespace["DEVICES"] - {name})
+    devices = []
+    lines = raw_input.decode("ascii").splitlines()
+    for index, row_name in enumerate([*siblings, name], start=3):
+        original_row = selected if row_name == name else route.ota.devices[0]
+        master = "pmos1v" if row_name.startswith("PM") else "nmos1v"
+        rail = "VDD" if master == "pmos1v" else "VSS"
+        terminals = ("out", "inn", rail, rail)
+        devices.append(
+            original_row.model_copy(
+                update={
+                    "name": row_name,
+                    "master_cell": master,
+                    "terminals": terminals,
+                }
+            )
+        )
+        options = lines[index].split(") ", 1)[1].split(" ", 1)[1]
+        lines[index] = f"{row_name} ({' '.join(terminals)}) gpdk090_{master} {options}"
+    lines[2] = lines[2].replace("Ota", dut)
+    lines[-2:] = [line.replace("Ota", dut) for line in lines[-2:]]
+    raw_input = ("\n".join(lines) + "\n").encode("ascii")
+    reopen_stdout = _reopen_stdout(dut, devices, name, route.before)
+    route = route.model_copy(
+        update={
+            "source_library": namespace["SOURCE"],
+            "source_cell": dut,
+            "testbench_cell": namespace["TB"],
+            "baseline": route.baseline.model_copy(update={"netlist_sha256": _sha(raw_input)}),
+            "target": target.model_copy(
+                update={
+                    "instance": target.instance.model_copy(update={"instance_path": path}),
+                    "netlist_path": path,
+                    "netlist_terminals": devices[-1].terminals,
+                }
+            ),
+            "ota": route.ota.model_copy(
+                update={
+                    "devices": tuple(devices),
+                    "reopen_stdout_sha256": _sha(reopen_stdout),
+                }
+            ),
+        }
+    )
     route_obj = route.model_dump(mode="json")
     route_obj["support"].update(
         adapter_sha256=_sha(renderer),
+        pdk_identity_sha256=guest_contract.SIZING_PDK_TREE_SHA256,
         cdf_constraints_sha256=document["route_qualification"]["support"]["cdf_constraints_sha256"],
     )
     axis = "w" if pmos_width else "l"
@@ -610,11 +669,31 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
         route_qualification=route_obj,
         renderer_sha256=_sha(renderer),
         hash_child_sha256=_sha(child_asset),
+        guest_sha256=_sha(guest),
         admitted_w=bounds if pmos_width else None,
         admitted_l=None if pmos_width else bounds,
         width_field="w" if pmos_width else None,
     )
-    document["slots"][0].update(child=child.model_dump(mode="json"), owned_library="OwnedOtaEdit")
+    document["slots"][0].update(
+        child=child.model_dump(mode="json"), owned_library=namespace["CHILD"]
+    )
+    safety = {key: "a" * 64 for key in guest_contract.SAFETY_FIELDS}
+    safety.update(
+        schema_version=2,
+        source_ade_path=namespace["SOURCE_PATH"].rsplit("/", 1)[0] + "/" + namespace["TB"] + "_ADE",
+        source_ade_design=[namespace["SOURCE"], namespace["TB"], "schematic"],
+        technology_path="/eda/cdsDefTechLib",
+        technology_tree_sha256="a" * 64,
+        source_dut_tree_sha256=route.baseline.revision_sha256,
+        source_tb_tree_sha256=route.baseline.testbench_revision_sha256,
+        source_symbol_tree_sha256=route.ota.symbol_tree_sha256,
+        source_ade_tree_sha256=route.ota.ade_state_tree_sha256,
+        supplemental_bytes=0,
+        job_limit_bytes=4_194_304,
+    )
+    safety_raw = _canonical(safety)
+    (directory / "native-safety.private.json").write_bytes(safety_raw)
+    document["slots"][0]["native_safety_sha256"] = _sha(safety_raw)
     (directory.parent / "baseline-input.private.scs").write_bytes(raw_input)
     for drift in (
         {"schema_version": 4},
@@ -627,14 +706,19 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     raw = _canonical(document)
     binding_path.write_bytes(raw)
     context.binding.pmos_default_change_sha256 = _sha(raw)
-    monkeypatch.delattr(guest_contract, "OTA_SIZING_ROUTE", raising=False)
+    mismatched = _canonical({**document, "guest_sha256": original_model.guest_sha256})
+    binding_path.write_bytes(mismatched)
+    context.binding.pmos_default_change_sha256 = _sha(mismatched)
     with pytest.raises(OperationRejected) as mismatch:
         sizing.selected_mos_sizing(context)
-    assert mismatch.value.reason == "registered_mos_sizing_guest_contract"
+    assert mismatch.value.reason == "registered_mos_sizing_asset"
+    binding_path.write_bytes(raw)
+    context.binding.pmos_default_change_sha256 = _sha(raw)
 
-    planned_scopes = []
-    monkeypatch.setattr(guest_contract, "OTA_SIZING_ROUTE", document["route"], raising=False)
-    monkeypatch.setattr(guest_contract, "sizing_route", planned_scopes.append)
+    def legacy_only(*_args):
+        pytest.fail("OTA must not enter the legacy route validator")
+
+    monkeypatch.setattr(guest_contract, "sizing_route", legacy_only)
     reopen_leaf = directory.parent / "baseline-reopen-stdout.private.txt"
     with pytest.raises(FileNotFoundError):
         sizing.selected_mos_sizing(context)
@@ -646,9 +730,7 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     recovered_route = {
         **route_obj,
         "ota": {
-            key: value
-            for key, value in route_obj["ota"].items()
-            if key != "netlist_receipt_sha256"
+            key: value for key, value in route_obj["ota"].items() if key != "netlist_receipt_sha256"
         }
         | {"recovered_source_sha256": "8" * 64},
     }
@@ -661,31 +743,66 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     context.binding.pmos_default_change_sha256 = _sha(raw)
     selected = sizing.selected_mos_sizing(context)
     candidate = sizing.MosSizingCandidate.model_validate_json(
-        _canonical({
-            "operation_id": document["slots"][0]["operation_id"],
-            "expected_enrollment_sha256": _sha(raw),
-            "expected_baseline_sha256": route.baseline.revision_sha256,
-            "values": request.model_dump(mode="json"),
-        })
+        _canonical(
+            {
+                "operation_id": document["slots"][0]["operation_id"],
+                "expected_enrollment_sha256": _sha(raw),
+                "expected_baseline_sha256": route.baseline.revision_sha256,
+                "values": request.model_dump(mode="json"),
+            }
+        )
     )
     service = selected._service(candidate)
     assert isinstance(service, RegisteredOtaMosSizingService)
     assert service.plan.changed == (axis,)
     assert service.plan.current.m == service.plan.expected.m
-    assert planned_scopes[0]["route_qualification"]["ota"] == route_obj["ota"]
-    assert planned_scopes[0]["route_qualification"]["ota"]["reopen_stdout_sha256"] == _sha(
+    planned_scope = service._provider._scope.model_dump(mode="json")
+    assert planned_scope["route_qualification"]["ota"] == route_obj["ota"]
+    assert planned_scope["route_qualification"]["ota"]["reopen_stdout_sha256"] == _sha(
         reopen_stdout
     )
-    assert planned_scopes[0]["route"] == document["route"]
-    assert "slot_manifest_sha256" not in planned_scopes[0]
+    assert planned_scope["route"] == document["route"]
+    assert "slot_manifest_sha256" not in planned_scope
     for phase, previous in (("EDIT_SAVE", None), ("INDEPENDENT_REOPEN_NETLIST", "a" * 64)):
-        _, payload = service._provider._prepare(service._binding, phase, previous)
-        packet = json.loads(payload[len(guest):])
+        argv, payload = service._provider._prepare(service._binding, phase, previous)
+        assert payload.startswith(guest) and len(payload) <= 524_288
+        assert argv[-2:] == [service.identity.expected_scope_sha256, phase]
+        raw_packet = payload[len(guest) :]
+        packet = json.loads(raw_packet)
         scope = base64.b64decode(packet["scope_base64"], validate=True)
-        assert json.loads(scope) == planned_scopes[0]
+        assert json.loads(scope) == planned_scope
         assert _sha(scope) == service.identity.expected_scope_sha256
         assert packet["previous_receipt_sha256"] == previous
+        assert base64.b64decode(packet["baseline_reopen_stdout_base64"]) == reopen_stdout
+        assert "baseline_recovery_base64" not in packet
+        assert "baseline_reopen_receipt_base64" not in packet
+        assert "legacy_base64" not in packet and "ota_skill_base64" not in packet
+        decoded = namespace["read_request"](
+            raw_packet, service.identity.expected_scope_sha256, phase, time.time()
+        )
+        assert decoded["scope"] == planned_scope
+        assert decoded["prior"] == previous and decoded["baseline"] == raw_input
+        assert len(decoded["sizing"]) == 3
+    with pytest.raises(ValueError, match="authority_or_predecessor"):
+        namespace["read_request"](
+            _canonical({**packet, "previous_receipt_sha256": None}),
+            service.identity.expected_scope_sha256,
+            "INDEPENDENT_REOPEN_NETLIST",
+            time.time(),
+        )
+    with pytest.raises(ValueError, match="reopen_digest"):
+        namespace["read_request"](
+            _canonical({
+                **packet,
+                "baseline_reopen_stdout_base64": sizing._encode(reopen_stdout + b"\n"),
+            }),
+            service.identity.expected_scope_sha256,
+            "INDEPENDENT_REOPEN_NETLIST",
+            time.time(),
+        )
     server = create_default_server(operator_mode=True, registered_mos_edit=True)
+    registered = await server.call_tool("cadence_inspect_registered_mos_sizing", {})
+    assert registered.structured_content["operation_ids"] == [candidate.operation_id]
     preview = await server.call_tool(
         "cadence_plan_registered_mos_sizing",
         {"request": candidate.model_dump(mode="json")},
@@ -696,4 +813,14 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
         {"request": preview.structured_content["identity"]},
     )
     assert result.structured_content["outcome"] == "NOT_FOUND"
+    request_path = binding_path.parent / "ota-sizing-request.json"
+    request_raw = _canonical(candidate.model_dump(mode="json"))
+    request_path.write_bytes(request_raw)
+    cli = [
+        "operator-mos-edit", "--settings", str(binding_path.parent / "settings.json"),
+        "--context", context.binding.context_id,
+    ]
+    assert main([*cli, "plan-sizing", "--request", str(request_path), _sha(request_raw)]) == 0
+    assert json.loads(capsys.readouterr().out) == preview.structured_content
+    assert request_path.read_bytes() == request_raw and binding_path.read_bytes() == raw
     assert not phases and not (directory / "registered-mos-intent.private.json").exists()

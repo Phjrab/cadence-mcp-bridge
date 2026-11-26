@@ -14,7 +14,7 @@ from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, mod
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
 from cadence_mcp_bridge import m2_cdf
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
-from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
 from cadence_mcp_bridge.mos_wlm_skill import render_mos_wlm_skill
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -46,6 +46,7 @@ from cadence_mcp_bridge.registered_mos_transport import (
     _ASSET,
     _CLAIM,
     _GUEST_SOURCE_LIMIT,
+    _LIMIT,
     Phase,
     _Authority,
     _encode,
@@ -94,6 +95,14 @@ class _Slot(VariableModel):
 
 _AdmittedMultipliers = Annotated[tuple[MosSizingCount, ...], Field(min_length=1, max_length=2)]
 _SizingRouteName = Literal["registered_mos_sizing", "registered_ota_mos_sizing"]
+_OTA_ROUTE = "registered_ota_mos_sizing"
+_OTA_RUNTIME_ASSET = "_ota_mos_candidate_runtime.py"
+_OTA_SKILL_ASSET = "_ota_mos_candidate_skill.py"
+_OTA_SUPERVISOR_LIMIT = 131_072
+_OTA_BASE_SHA256 = "539794c47d1b5ab57a04030e892ab41763be93a0b752129f5771f2369447c147"
+_OTA_SKILL_SHA256 = "9ed25ec92700c9b323ecabbd0e0e2ccea2323b1009fdb8a1fa6c53081be7192c"
+_LEGACY_MAIN_SUFFIX = b'if __name__ == "__main__":\n    main()\n'
+_OTA_MAIN_SUFFIX = b'if __name__ == "__main__":\n    ota_main()\n'
 
 
 class _SizingEnrollment(VariableModel):
@@ -238,12 +247,45 @@ def _asset(raw: bytes, digest: str, *, max_bytes: int = 65_536) -> bytes:
     return raw
 
 
+def ota_mos_sizing_supervisor() -> bytes:
+    """Assemble the enrolled OTA supervisor from the fixed installed source files."""
+    package = files("cadence_mcp_bridge")
+    legacy = _asset(package.joinpath(_ASSET).read_bytes(), _OTA_BASE_SHA256)
+    _require(legacy.endswith(_LEGACY_MAIN_SUFFIX), "registered_ota_mos_sizing_entry")
+    skill = _asset(package.joinpath(_OTA_SKILL_ASSET).read_bytes(), _OTA_SKILL_SHA256)
+    runtime = package.joinpath(_OTA_RUNTIME_ASSET).read_bytes()
+    legacy_body = legacy[: -len(_LEGACY_MAIN_SUFFIX)]
+    sources = f"OTA_LEGACY_SOURCE = {legacy_body!r}\nOTA_SKILL_SOURCE = {skill!r}\n".encode("ascii")
+    supervisor = b"\n".join((sources, runtime))
+    _require(
+        runtime.endswith(_OTA_MAIN_SUFFIX)
+        and len(supervisor) <= _OTA_SUPERVISOR_LIMIT
+        and supervisor.isascii(),
+        "registered_ota_mos_sizing_supervisor_bound",
+    )
+    return supervisor
+
+
+def _guest_asset(reg: _SizingEnrollment) -> tuple[str, bytes]:
+    if reg.route == _OTA_ROUTE:
+        return _OTA_RUNTIME_ASSET, _asset(
+            ota_mos_sizing_supervisor(), reg.guest_sha256, max_bytes=_OTA_SUPERVISOR_LIMIT
+        )
+    return _ASSET, _asset(
+        files("cadence_mcp_bridge").joinpath(_ASSET).read_bytes(),
+        reg.guest_sha256,
+        max_bytes=_GUEST_SOURCE_LIMIT,
+    )
+
+
 def _hash_child_asset(reg: _SizingEnrollment) -> tuple[str, str | None]:
     if reg.route_qualification.support.lifecycle == "headless_wlm_v1":
         return "_mos_wlm_callback.py", getattr(guest_contract, "WLM_HASH_CHILD_SHA256", None)
     instance = reg.route_qualification.target.instance
     if (instance.instance_path, instance.master_cell, instance.property_name) == (
-        "DUT/MP", "pmos1v", "w"
+        "DUT/MP",
+        "pmos1v",
+        "w",
     ):
         _require(
             reg.width_field == "w"
@@ -269,6 +311,7 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
         scope: _SizingScope,
         sizing_raw: bytes,
         baseline: bytes,
+        ota_evidence: dict[str, str],
     ) -> None:
         super().__init__(context, directory)
         self._enrollment = enrollment
@@ -276,6 +319,7 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
         self._scope = scope
         self._sizing = sizing_raw
         self._baseline = baseline
+        self._ota_evidence = ota_evidence
 
     def _intent(self, binding: RegisteredMosEditBinding) -> bytes:
         return _canonical(
@@ -307,11 +351,15 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
         safety = _read(
             self._directory / "native-safety.private.json", 65_536, scope.native_safety_sha256
         )
-        _document(safety)
+        safety_document = _document(safety)
+        if reg.route == _OTA_ROUTE:
+            from cadence_mcp_bridge._ota_mos_candidate_runtime import verify_safety
+
+            verify_safety(  # type: ignore[no-untyped-call]
+                safety_document, scope.route_qualification.model_dump(mode="json"), guest_contract
+            )
         package = files("cadence_mcp_bridge")
-        guest = _asset(
-            package.joinpath(_ASSET).read_bytes(), reg.guest_sha256, max_bytes=_GUEST_SOURCE_LIMIT
-        )
+        guest_name, guest = _guest_asset(reg)
         support = _asset(
             package.joinpath("_amp_pm0_default_phase.py").read_bytes(), reg.support_sha256
         )
@@ -326,6 +374,7 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
             "cdf_collector_base64": _encode(collector),
             "sizing_base64": _encode(self._sizing),
             "previous_receipt_sha256": previous,
+            **self._ota_evidence,
         }
         if scope.slot_manifest_sha256 is not None:
             verifier_pin = getattr(guest_contract, "SIZING_SLOT_VERIFIER_SHA256", None)
@@ -339,12 +388,15 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
             f"fixed=sys.stdin.read({len(guest)})\n"
             f"if hashlib.sha256(fixed.encode('ascii')).hexdigest()!='{reg.guest_sha256}':"
             " raise ValueError('MOS asset')\n"
-            f"eval(compile(fixed,'{_ASSET}','exec'))"
+            f"eval(compile(fixed,'{guest_name}','exec'))"
         )
+        payload = guest + _canonical(packet)
+        if reg.route == _OTA_ROUTE:
+            _require(len(payload) <= _LIMIT, "registered_ota_mos_sizing_packet_bound")
         return (
             _ssh(self._context.contracts.environment)
             + ["-c", bootstrap, binding.scope_sha256, phase],
-            guest + _canonical(packet),
+            payload,
         )
 
     def _saved(self, binding: RegisteredMosEditBinding, raw: bytes) -> NativeMosEditSave:
@@ -399,14 +451,9 @@ class RegisteredMosSizing:
             renderer_pin = guest_contract.SIZING_RENDERER_SHA256
         child_name, child_pin = _hash_child_asset(reg)
         _asset(package.joinpath(renderer_name).read_bytes(), reg.renderer_sha256)
-        _asset(
-            package.joinpath(_ASSET).read_bytes(), reg.guest_sha256, max_bytes=_GUEST_SOURCE_LIMIT
-        )
-        route_pin = (
-            "OTA_SIZING_ROUTE" if reg.route == "registered_ota_mos_sizing" else "SIZING_ROUTE"
-        )
+        _guest_asset(reg)
         _require(
-            getattr(guest_contract, route_pin, None) == reg.route
+            (reg.route == _OTA_ROUTE or reg.route == guest_contract.SIZING_ROUTE)
             and reg.renderer_sha256 == renderer_pin
             and reg.hash_child_sha256 == child_pin
             and reg.support_sha256 == guest_contract.SUPPORT_SHA256
@@ -421,7 +468,8 @@ class RegisteredMosSizing:
         route = reg.route_qualification
         self._baseline_reopen_stdout = (
             _read(
-                directory / "baseline-reopen-stdout.private.txt", 65_536,
+                directory / "baseline-reopen-stdout.private.txt",
+                65_536,
                 route.ota.reopen_stdout_sha256,
             )
             if isinstance(route, RegisteredOtaMosSizingRoute)
@@ -429,18 +477,33 @@ class RegisteredMosSizing:
         )
         self._baseline_recovery: RecoveredOtaGenerationAnalysisSource | None = None
         self._baseline_reopen_receipt: MosBlockStageReceipt | None = None
+        self._ota_evidence: dict[str, str] = {}
+        if self._baseline_reopen_stdout is not None:
+            self._ota_evidence["baseline_reopen_stdout_base64"] = _encode(
+                self._baseline_reopen_stdout
+            )
         if isinstance(route, RegisteredOtaMosSizingRoute) and route.ota.recovered_source_sha256:
+            recovery_raw = _read(directory / "baseline-recovered-source.private.json", 16_384)
+            receipt_raw = _read(directory / "baseline-reopen-receipt.private.json", 8_192)
+            _closed_document(recovery_raw, max_bytes=16_384)
+            _closed_document(receipt_raw, max_bytes=8_192)
             self._baseline_recovery = RecoveredOtaGenerationAnalysisSource.model_validate_json(
-                _read(directory / "baseline-recovered-source.private.json", 16_384)
+                recovery_raw
             )
-            self._baseline_reopen_receipt = MosBlockStageReceipt.model_validate_json(
-                _read(directory / "baseline-reopen-receipt.private.json", 8_192)
-            )
+            self._baseline_reopen_receipt = MosBlockStageReceipt.model_validate_json(receipt_raw)
             _require(
                 canonical_digest(self._baseline_recovery) == route.ota.recovered_source_sha256
                 and canonical_digest(self._baseline_reopen_receipt)
                 == route.ota.reopen_receipt_sha256,
                 "registered_ota_mos_sizing_recovered_baseline",
+            )
+            self._ota_evidence.update(
+                baseline_recovery_base64=_encode(
+                    _canonical(self._baseline_recovery.model_dump(mode="json"))
+                ),
+                baseline_reopen_receipt_base64=_encode(
+                    _canonical(self._baseline_reopen_receipt.model_dump(mode="json"))
+                ),
             )
         _read(
             directory / "cdf-constraints.private.txt",
@@ -573,7 +636,12 @@ class RegisteredMosSizing:
             valid_until_unix=reg.valid_until_unix,
             slot_manifest_sha256=slot.slot_manifest_sha256,
         )
-        guest_contract.sizing_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
+        if reg.route == _OTA_ROUTE:
+            from cadence_mcp_bridge._ota_mos_candidate_runtime import parse_ota_sizing_route
+
+            parse_ota_sizing_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
+        else:
+            guest_contract.sizing_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
         binding = RegisteredMosEditBinding(
             scope_sha256=canonical_digest(scope), **subject.model_dump()
         )
@@ -585,6 +653,7 @@ class RegisteredMosSizing:
             scope,
             sizing,
             self._baseline,
+            self._ota_evidence,
         )
         binding_pin = canonical_digest(binding)
         if isinstance(route, RegisteredOtaMosSizingRoute):
