@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import replace
 from types import SimpleNamespace
 from uuid import uuid4
@@ -24,6 +25,8 @@ from cadence_mcp_bridge.authenticated_provider import (
 )
 from cadence_mcp_bridge.candidate_execution import PmosDcOperation
 from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.environments import EnvironmentProfile
+from cadence_mcp_bridge.generic_ade import ModelInclude
 from cadence_mcp_bridge.generic_measurements import render_reader
 from cadence_mcp_bridge.mos_dc_evaluation import (
     MosDcEvidence,
@@ -49,14 +52,36 @@ def _sha(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def _dc_input(raw):
-    return raw.replace(b"VDD=1", b"ExampleBiasN=1 ExampleBiasP=1") + b"analysis0 dc save=all\n"
+def _dc_input(raw, model_path):
+    return (
+        raw.replace(b"VDD=1", b"ExampleBiasN=1 ExampleBiasP=1")
+        + f'include "{model_path}" section=nn\n'.encode()
+        + b"VDD (vdd 0) vsource dc=1\nsimulatorOptions options temp=27\n"
+        + b"analysis0 dc save=all\n"
+    )
 
 
-def _point(registered, length, index, *, baseline_route=False):
+def _electrical_drift(raw, drift):
+    changes = {
+        "temperature": (b"temp=27", b"temp=50"),
+        "supply": (b"vsource dc=1", b"vsource dc=1.2"),
+        "input": (b"ExampleBiasN=1", b"ExampleBiasN=0"),
+    }
+    if drift in changes:
+        before, after = changes[drift]
+        assert raw.count(before) == 1
+        return raw.replace(before, after)
+    return raw
+
+
+def _point(registered, length, index, *, baseline_route=False, drift=None):
     context, plan, ade, reader, _, _ = registered
     sizing, child, _, _, original_binding, before, capture = _fixture()
-    old, new = _dc_input(before), _dc_input(capture.netlist)
+    model_path = context.contracts.environment.paths.protected_roots[0] + "/model.scs"
+    model = ModelInclude(
+        path=model_path, section="nn", file_sha256=("c" if drift == "model" else "b") * 64
+    )
+    old, new = _dc_input(before, model_path), _dc_input(capture.netlist, model_path)
     new = new.replace(b"l=2.5e-7", f"l={length}n".encode())
     revision = _sha(f"synthetic revision {index}".encode())
     child = child.model_copy(update={"revision_id": f"edit-{index}"})
@@ -113,8 +138,9 @@ def _point(registered, length, index, *, baseline_route=False):
     ade = ade.model_copy(
         update={
             "static_statements_sha256": static_fingerprint(
-                partition_input(old if baseline_route else new)[3]
+                partition_input(_electrical_drift(old, drift) if baseline_route else new)[3]
             ),
+            "model_includes": (model,),
             "source_tree_sha256": _sha(f"owned bench {index}".encode()),
             "ade_state_tree_sha256": "2" * 64
             if baseline_route
@@ -122,6 +148,15 @@ def _point(registered, length, index, *, baseline_route=False):
         }
     )
     reader = reader.model_copy(update={"ade_registration_sha256": canonical_digest(ade)})
+    if drift == "reader":
+        reader = reader.model_copy(
+            update={
+                "nodes": (
+                    reader.nodes[0],
+                    reader.nodes[1].model_copy(update={"selector": "/other"}),
+                ),
+            }
+        )
     library = f"/synthetic/owned-{index}"
     export = dict(
         status="OWNED_INPUT_COPY_VERIFIED",
@@ -155,7 +190,7 @@ def _point(registered, length, index, *, baseline_route=False):
                 tree_sha256=export["dependency_tree_sha256"],
             )
         ],
-        model_files=[],
+        model_files=[{"path": model.path, "file_sha256": model.file_sha256}],
         profile=profile.model_dump(mode="json"),
         variables=[item.model_dump(mode="json") for item in variables.variables],
         ade=ade.model_dump(mode="json"),
@@ -200,9 +235,11 @@ def _point(registered, length, index, *, baseline_route=False):
     return evidence, ade, reader
 
 
-def _baseline(registered):
-    evidence, ade, reader = _point(registered, "250", 99, baseline_route=True)
-    original = b"// original baseline native capture\n" + evidence.baseline_input
+def _baseline(registered, *, drift=None):
+    evidence, ade, reader = _point(registered, "250", 99, baseline_route=True, drift=drift)
+    original = b"// original baseline native capture\n" + _electrical_drift(
+        evidence.baseline_input, drift
+    )
     raw = _terminal((replace(evidence, confirmed_input=original), ade, reader), "SUCCEEDED", "1")
     context, operation = evidence.route.context, evidence.route.operation
     identity = operation.query.operation_id
@@ -220,7 +257,82 @@ def _baseline(registered):
         report=report,
         expected_report_sha256=_sha(report),
         expected_terminal_sha256=record.progress.provider_receipt_sha256,
+        environment_profile=context.binding.environment_profile.read_bytes(),
     ), original
+
+
+@pytest.mark.parametrize(
+    "drift", [None, "temperature", "supply", "input", "model", "reader", "tool", "floor"]
+)
+def test_storage_successor_matches_only_unchanged_dc_conditions(
+    measurement_operator,  # noqa: F811
+    tmp_path,
+    drift,
+):
+    registered = reader_for(measurement_operator)
+    baseline, baseline_input = _baseline(registered, drift=drift)
+    context, plan, *reader = registered
+    document = json.loads(context.binding.environment_profile.read_bytes())
+    document["limits"]["result_reserved_bytes"] += 4194304
+    if drift == "floor":
+        document["limits"]["disk_floor_percent"] += 1
+    if drift == "tool":
+        document["tools"]["spectre"]["sha256"] = "f" * 64
+    raw = _canonical(document)
+    path = tmp_path / "storage-successor.json"
+    path.write_bytes(raw)
+    new_sha = _sha(raw)
+    updated = replace(
+        context,
+        binding=context.binding.model_copy(
+            update={"environment_profile": path, "environment_sha256": new_sha}
+        ),
+        contracts=replace(
+            context.contracts,
+            environment=EnvironmentProfile.model_validate_json(raw),
+            environment_sha256=new_sha,
+        ),
+    )
+    point = _point(
+        (updated, plan.model_copy(update={"environment_sha256": new_sha}), *reader), "200", 0
+    )
+    evidence, _, _ = point
+    result = _terminal(point, "SUCCEEDED", "0.8")
+
+    if drift in ("temperature", "supply", "input"):
+        with pytest.raises(
+            ValueError, match="spectre_(static_inputs|explicit_parameters)_mismatch"
+        ):
+            read_mos_dc(
+                evidence,
+                executed_input=evidence.confirmed_input,
+                native_result=result,
+                baseline=baseline,
+                baseline_executed_input=baseline_input,
+            )
+        return
+    comparison = read_mos_dc(
+        evidence,
+        executed_input=evidence.confirmed_input,
+        native_result=result,
+        baseline=baseline,
+    )
+    if drift is not None:
+        assert comparison.comparison_status == "CONDITION_MISMATCH"
+        assert all(item.absolute_change is None for item in comparison.metrics)
+        return
+    assert comparison.comparison_status == "COMPARABLE"
+    assert comparison.baseline_operation_id == baseline.query.operation_id
+    (output,) = (item for item in comparison.metrics if item.metric.signal_id == "output")
+    assert output.absolute_change == pytest.approx(-0.2)
+
+    with pytest.raises(ValueError, match="evidence digest mismatch"):
+        read_mos_dc(
+            evidence,
+            executed_input=evidence.confirmed_input,
+            native_result=result,
+            baseline=replace(baseline, environment_profile=raw),
+        )
 
 
 def _terminal(point, phase, voltage):

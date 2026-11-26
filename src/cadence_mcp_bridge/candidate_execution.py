@@ -375,6 +375,7 @@ class PmosDcOperation:
     report: bytes | None = None
     expected_report_sha256: str | None = None
     expected_terminal_sha256: str | None = None
+    environment_profile: bytes | None = None
 
 
 class PmosDefaultChangeRequest(VariableModel):

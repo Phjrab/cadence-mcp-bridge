@@ -22,12 +22,17 @@ from cadence_mcp_bridge.candidate_execution import (
 )
 from cadence_mcp_bridge.candidate_reports import CandidateMetric, candidate_metric_delta
 from cadence_mcp_bridge.domain_provisioning import _closed_document
+from cadence_mcp_bridge.environments import EnvironmentProfile
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationService, NativeOperationStatus
-from cadence_mcp_bridge.operator_operations import DurableOperation, OperationPhase
+from cadence_mcp_bridge.operator_operations import (
+    DurableOperation,
+    OperationPhase,
+    bounded_document,
+)
 from cadence_mcp_bridge.registered_mos_edit import RegisteredMosEditBinding
 from cadence_mcp_bridge.registered_mos_sizing import (
     MosSizingPlan,
@@ -359,6 +364,23 @@ async def capture_mos_dc(
     return _comparison(row, report, binding, evidence, baseline, None)
 
 
+def _storage_only_successor(baseline: PmosDcOperation, source: MosDcRoute) -> bool:
+    """Allow a storage ceiling increase after validating both original profiles."""
+    old_sha = baseline.plan.environment_sha256
+    new_sha = source.operation.plan.environment_sha256
+    if old_sha == new_sha or baseline.environment_profile is None:
+        return False
+    current = bounded_document(source.context.binding.environment_profile)
+    _pinned_json(baseline.environment_profile, old_sha)
+    _pinned_json(current, new_sha)
+    old = EnvironmentProfile.model_validate_json(baseline.environment_profile)
+    new = EnvironmentProfile.model_validate_json(current)
+    excluded = {"limits": {"result_reserved_bytes"}}
+    return old.limits.result_reserved_bytes < new.limits.result_reserved_bytes and old.model_dump(
+        exclude=excluded
+    ) == new.model_dump(exclude=excluded)
+
+
 def _comparison(
     row: MosDcEvaluation,
     report: ResultReport,
@@ -384,12 +406,20 @@ def _comparison(
             evidence.edit_binding.owned_copy_operation_id,
         ):
             raise ValueError("baseline operation is not independent")
+        source = evidence.route
+        assert source is not None
+        storage_only = _storage_only_successor(baseline, source)
         _, old_conditions, old_reader, old_semantics = _width_route(
-            baseline, evidence.baseline_input, "dc"
+            baseline, evidence.baseline_input, "dc", storage_successor_verified=storage_only
         )
+        new_semantics = binding.semantics
+        if storage_only:
+            _, _, _, new_semantics = _width_route(
+                source.operation, None, "dc", storage_successor_verified=True
+            )
         _, _, old_report = _width_report(baseline, old_conditions, old_reader)
         if (
-            old_semantics != binding.semantics
+            old_semantics != new_semantics
             or old_conditions.ade_state_tree_sha256 != binding.seed_ade_sha256
         ):
             comparison = "CONDITION_MISMATCH"

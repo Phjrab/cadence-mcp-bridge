@@ -156,6 +156,10 @@ class _Baseline(VariableModel):
             report=self.report.read(524288),
             expected_report_sha256=self.report.sha256,
             expected_terminal_sha256=self.terminal_sha256,
+            environment_profile=_Artifact(
+                path=context.binding.environment_profile,
+                sha256=operation.plan.environment_sha256,
+            ).read(32768),
         )
 
 
