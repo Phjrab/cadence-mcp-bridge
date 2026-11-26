@@ -494,9 +494,14 @@ class RegisteredMosSizingService:
             expected_plan_sha256=plan.plan_sha256,
             expected_scope_sha256=binding.scope_sha256,
         )
-        self._before = _check_input(route.target, baseline_input, route.before)
         self._binding, self._route = binding, route
+        self._before = self._project_input(baseline_input, route.before)
         self._baseline_input, self._provider = baseline_input, provider
+
+    def _project_input(
+        self, raw: bytes, properties: dict[MosProperty, MosPropertyValue]
+    ) -> tuple[_NetlistControls, list[str], dict[str, str]]:
+        return _check_input(self._route.target, raw, properties)
 
     def _check_request(self, request: PmosDefaultChangeRequest) -> None:
         if _checked(request) != self.identity:
@@ -598,7 +603,7 @@ class RegisteredMosSizingService:
             reopened.properties,
             compare_widths=lambda total, finger: _engineering(total) == _engineering(finger),
         )
-        header, fixed, options = _check_input(plan.target, capture.netlist, reopened.properties)
+        header, fixed, options = self._project_input(capture.netlist, reopened.properties)
         old_header, old_fixed, _ = self._before
         source9 = (
             plan.baseline.netlist_sha256 == _SOURCE9_DC_SHA256
